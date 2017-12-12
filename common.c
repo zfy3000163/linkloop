@@ -35,7 +35,7 @@
 #endif
 
 int vlan = 1;
-u_int16_t vlan_replay  = 1;
+u_int16_t vlan_reply[1000];
 
 int debug_flag = 0;
 
@@ -103,7 +103,7 @@ void get_hwaddr(int sock, const char name[], u_int8_t mac[]) {
 	memcpy(mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
 }
 
-void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_t dst[], size_t len, int response) {
+void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_t dst[], size_t len, int response, u_int16_t vlan_reply) {
 	int i;
 
 	assert(len <= ETH_DATA_LEN);			/* 0x05DC == 1500 */
@@ -112,7 +112,7 @@ void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_
 
         u_int16_t vlan_id = 1;
         if(response){
-            vlan_id = vlan_replay;
+            vlan_id = vlan_reply;
         }
         else{
             vlan_id = vlan;
@@ -134,8 +134,8 @@ void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_
                 pack->data[i] = i;
         }
         else{
-            pack->data[1] = (vlan_replay) & 0x00ff;
-            pack->data[0] = (vlan_replay >> 8) & 0xff;
+            pack->data[1] = (vlan_reply) & 0x00ff;
+            pack->data[0] = (vlan_reply >> 8) & 0xff;
             for(i = 2; i < len; i++)
                 pack->data[i] = i;
         }

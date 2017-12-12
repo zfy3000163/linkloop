@@ -37,7 +37,7 @@ u_int8_t	mac_src[IFHWADDRLEN];
 struct vlan_get{
     u_int16_t vlan_id;
 };
-extern u_int16_t vlan_replay;
+extern u_int16_t vlan_reply[1000];
 
 int main(int argc, char *argv[]) {
 	int sock;
@@ -83,11 +83,11 @@ int main(int argc, char *argv[]) {
 
 
 			struct vlan_get *st_get_vlan = (struct vlan_get*)(rpack.data);
-			vlan_replay = ntohs(st_get_vlan->vlan_id);
+			vlan_reply[i] = ntohs(st_get_vlan->vlan_id);
 				
 			/* return a test packet to the sender */
 			printf("Received packet on %s\n", argv[i+1]);
-			mk_test_packet(&spack, mac_dst, mac_src, len, 1);
+			mk_test_packet(&spack, mac_dst, mac_src, len, 1, vlan_reply[i]);
 			send_packet(sock, argv[i+1], &spack);
 		}
 	} while(1);

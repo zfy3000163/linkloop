@@ -135,7 +135,7 @@ static int linkloop(int sock, const u_int8_t mac_src[], const u_int8_t mac_dst[]
 	struct llc_packet_strip_vlan rpack;
 	int datasize = pack_size - sizeof(struct llc) - sizeof(struct ether_header) - sizeof(u_int32_t);
 
-	mk_test_packet(&spack, mac_src, mac_dst, pack_size, 0);
+	mk_test_packet(&spack, mac_src, mac_dst, pack_size, 0, 0);
 	if(alarm(timeout) < 0) {
 		perror("alarm");
 		exit(1);
