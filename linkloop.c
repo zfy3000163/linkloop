@@ -82,10 +82,10 @@ void handle_options(int argc, char * const argv[]) {
 			break;
 		case 'v':
 			vlan = strtol(optarg, NULL, 0);
-            if(vlan > 4095){
-                fprintf(stderr, "vlan (%d) number is too long, must be less than 4096", vlan);
-                exit(1);
-            }
+			if(vlan > 4095){
+				fprintf(stderr, "vlan (%d) number is too long, must be less than 4096", vlan);
+				exit(1);
+			}
 
 			break;
 		case 's':

@@ -110,13 +110,14 @@ void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_
 	memcpy(pack->eth_hdr.ether_dhost, dst, IFHWADDRLEN);
 	memcpy(pack->eth_hdr.ether_shost, src, IFHWADDRLEN);
 
-    u_int16_t vlan_id = 1;
-    if(response){
-	    vlan_id = vlan_replay;
-    }
-    else{
-	    vlan_id = vlan;
-    }
+        u_int16_t vlan_id = 1;
+        if(response){
+            vlan_id = vlan_replay;
+        }
+        else{
+            vlan_id = vlan;
+        }
+
 	u_int16_t vlan_length = len;
 	pack->vlan_id = htons(vlan_id);
 	pack->vlan_length = htons(vlan_length);
@@ -126,18 +127,18 @@ void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_
 	pack->llc.ssap = (response) ? 0x01 : 0x80;	/* XNS? */
 	pack->llc.ctrl = TEST_CMD;			/* TEST */
 
-    if(!response){
-        pack->data[1] = (vlan) & 0x00ff;
-        pack->data[0] = (vlan >> 8) & 0xff;
-	    for(i = 2; i < len; i++)
-		    pack->data[i] = i;
-    }
-    else{
-        pack->data[1] = (vlan_replay) & 0x00ff;
-        pack->data[0] = (vlan_replay >> 8) & 0xff;
-	for(i = 2; i < len; i++)
-	    pack->data[i] = i;
-    }
+        if(!response){
+            pack->data[1] = (vlan) & 0x00ff;
+            pack->data[0] = (vlan >> 8) & 0xff;
+            for(i = 2; i < len; i++)
+                pack->data[i] = i;
+        }
+        else{
+            pack->data[1] = (vlan_replay) & 0x00ff;
+            pack->data[0] = (vlan_replay >> 8) & 0xff;
+            for(i = 2; i < len; i++)
+                pack->data[i] = i;
+        }
 
 }
 

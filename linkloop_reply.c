@@ -82,8 +82,8 @@ int main(int argc, char *argv[]) {
 				continue;
 
 
-            struct vlan_get *st_get_vlan = (struct vlan_get*)(rpack.data);
-            vlan_replay = ntohs(st_get_vlan->vlan_id);
+			struct vlan_get *st_get_vlan = (struct vlan_get*)(rpack.data);
+			vlan_replay = ntohs(st_get_vlan->vlan_id);
 				
 			/* return a test packet to the sender */
 			printf("Received packet on %s\n", argv[i+1]);
