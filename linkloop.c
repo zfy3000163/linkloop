@@ -204,9 +204,14 @@ int main(int argc, char * const argv[]) {
 			printf("Retry %d...\n", i);
 	}
 
-	if(total_sent == total_good)
+	if(total_sent == total_good){
 		printf("  -- OK -- %d packets\n", total_sent);
-	if(total_good + total_bad == 0)
+		return 0;
+	}
+	if(total_good + total_bad == 0){
 		printf("  -- NO RESPONSE --\n");
+		return 1;
+	}
+
 	return 0;
 }
