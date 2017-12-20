@@ -183,7 +183,7 @@ int main(int argc, char * const argv[]) {
 		return 1;
 	}
 
-	printf("Link connectivity to LAN station: %s (HW addr %s)\n", arg_addr, mac2str(mac_dst));
+	//printf("Link connectivity to LAN station: %s (HW addr %s)\n", arg_addr, mac2str(mac_dst));
 
 	/* Open a socket */
 	if((sock = socket(AF_INET, SOCK_PACKET, htons(ETH_P_802_2))) == -1) {
