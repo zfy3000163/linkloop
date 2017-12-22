@@ -34,7 +34,7 @@
 #error "SOMETHING IS VERY FISHY: IFHWADDRLEN != ETH_ALEN"
 #endif
 
-int vlan = 1;
+int vlan = 1, is_vlan_used = 0;
 u_int16_t vlan_reply[1000];
 
 int debug_flag = 0;
@@ -104,45 +104,90 @@ void get_hwaddr(int sock, const char name[], u_int8_t mac[]) {
 }
 
 void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_t dst[], size_t len, int response, u_int16_t vlan_reply) {
+	assert(len <= ETH_DATA_LEN);			/* 0x05DC == 1500 */
+
 	int i;
 
-	assert(len <= ETH_DATA_LEN);			/* 0x05DC == 1500 */
 	memcpy(pack->eth_hdr.ether_dhost, dst, IFHWADDRLEN);
 	memcpy(pack->eth_hdr.ether_shost, src, IFHWADDRLEN);
 
-        u_int16_t vlan_id = 1;
-        if(response){
-            vlan_id = vlan_reply;
-        }
-        else{
-            vlan_id = vlan;
-        }
+	u_int16_t vlan_id = 1;
+	if(response){
+		vlan_id = vlan_reply;
+	}
+	else{
+		vlan_id = vlan;
+	}
 
 	u_int16_t vlan_length = len;
 	pack->vlan_id = htons(vlan_id);
 	pack->vlan_length = htons(vlan_length);
 
 	pack->eth_hdr.ether_type = htons(0x8100);
+
 	pack->llc.dsap = (response) ? 0x80 : 0x00;
 	pack->llc.ssap = (response) ? 0x01 : 0x80;	/* XNS? */
 	pack->llc.ctrl = TEST_CMD;			/* TEST */
 
-        if(!response){
-            pack->data[1] = (vlan) & 0x00ff;
-            pack->data[0] = (vlan >> 8) & 0xff;
-            for(i = 2; i < len; i++)
-                pack->data[i] = i;
-        }
-        else{
-            pack->data[1] = (vlan_reply) & 0x00ff;
-            pack->data[0] = (vlan_reply >> 8) & 0xff;
-            for(i = 2; i < len; i++)
-                pack->data[i] = i;
-        }
+	if(!response){
+		pack->data[1] = (vlan) & 0x00ff;
+		pack->data[0] = (vlan >> 8) & 0xff;
+		for(i = 2; i < len; i++)
+			pack->data[i] = i;
+	}
+	else{
+		pack->data[1] = (vlan_reply) & 0x00ff;
+		pack->data[0] = (vlan_reply >> 8) & 0xff;
+		for(i = 2; i < len; i++)
+			pack->data[i] = i;
+	}
+
+        pack->data[3] = 0x1;
 
 }
 
-void send_packet(int sock, const char iface[], struct llc_packet *pack) {
+void mk_test_packet_strip_vlan(struct llc_packet_strip_vlan *pack, const u_int8_t src[], const u_int8_t dst[], size_t len, int response, u_int16_t vlan_reply) {
+	assert(len <= ETH_DATA_LEN);			/* 0x05DC == 1500 */
+
+	int i;
+
+	memcpy(pack->eth_hdr.ether_dhost, dst, IFHWADDRLEN);
+	memcpy(pack->eth_hdr.ether_shost, src, IFHWADDRLEN);
+
+
+	pack->eth_hdr.ether_type = htons(len);
+
+	pack->llc.dsap = (response) ? 0x80 : 0x00;
+	pack->llc.ssap = (response) ? 0x01 : 0x80;	/* XNS? */
+	pack->llc.ctrl = TEST_CMD;			/* TEST */
+
+	for(i = 0; i < len; i++)
+		pack->data[i] = i;
+
+        pack->data[3] = 0x0;
+}
+
+void send_packet_strip_vlan(int sock, const char iface[], struct llc_packet_strip_vlan * pack) {
+	struct sockaddr sa;
+	int ret;
+
+	bzero((char *)&sa, sizeof(struct sockaddr));
+	sa.sa_family = AF_INET;
+	strncpy(sa.sa_data, iface, IF_NAMESIZE - 1);
+
+	/* Send the packet */
+	ret = sendto(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sa, sizeof(sa));
+	if(ret == -1) {
+		perror("sendto");
+		exit(1);
+	}
+	if(ret != sizeof(*pack))
+		fprintf(stderr, "Warning: Incomplete packet sent\n");
+	if(debug_flag)
+		printf("sent TEST packet to %s\n", mac2str(pack->eth_hdr.ether_dhost));
+}
+
+void send_packet(int sock, const char iface[], struct llc_packet * pack) {
 	struct sockaddr sa;
 	int ret;
 
@@ -183,6 +228,7 @@ int recv_packet(int sock, struct llc_packet_strip_vlan *pack) {
 	ret = ntohs(pack->eth_hdr.ether_type);
 	if(debug_flag)
 		printf("received TEST packet (%d bytes) from %s\n", ret, mac2str(pack->eth_hdr.ether_shost));
+
 	return ret;
 }
 

@@ -43,11 +43,13 @@ int main(int argc, char *argv[]) {
 	int sock;
 	size_t len;
 	struct llc_packet spack;
+	struct llc_packet_strip_vlan spack_strip_vlan;
 	struct llc_packet_strip_vlan rpack;
-    int nif = argc -1; 	/* number of interfaces to listen */
-    int i = nif;	/* loop iterator */
+        int nif = argc -1; 	/* number of interfaces to listen */
+        int i = nif;	/* loop iterator */
 	
 	program = argv[0];
+
 
 	if(nif == 0 || nif > MAX_IFACES)
 	{
@@ -81,14 +83,20 @@ int main(int argc, char *argv[]) {
 			if(memcmp(mac_listened[i], mac_dst, IFHWADDRLEN))
 				continue;
 
-
-			struct vlan_get *st_get_vlan = (struct vlan_get*)(rpack.data);
-			vlan_reply[i] = ntohs(st_get_vlan->vlan_id);
+			if(rpack.data[3] == 0x1){
+			    struct vlan_get *st_get_vlan = (struct vlan_get*)(rpack.data);
+			    vlan_reply[i] = ntohs(st_get_vlan->vlan_id);
+			    mk_test_packet(&spack, mac_dst, mac_src, len, 1, vlan_reply[i]);
+			    send_packet(sock, argv[i+1], &spack);
+			}
+			else if(rpack.data[3] == 0x0){
+			
+			    mk_test_packet_strip_vlan(&spack_strip_vlan, mac_dst, mac_src, len, 1, 0);
+			    send_packet_strip_vlan(sock, argv[i+1], &spack_strip_vlan);
+			}
 				
 			/* return a test packet to the sender */
 			printf("Received packet on %s\n", argv[i+1]);
-			mk_test_packet(&spack, mac_dst, mac_src, len, 1, vlan_reply[i]);
-			send_packet(sock, argv[i+1], &spack);
 		}
 	} while(1);
 	return 0;

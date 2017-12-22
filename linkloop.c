@@ -40,7 +40,7 @@ static unsigned total_bad = 0;
 size_t	pack_size = ETH_DATA_LEN - sizeof(u_int32_t);	/* 0x05DC == 1500 */
 int	timeout = 2;
 int	retries = 1;
-extern int vlan ;
+extern int vlan, is_vlan_used ;
 char	*iface = "eth0";
 
 extern int	debug_flag;
@@ -81,6 +81,7 @@ void handle_options(int argc, char * const argv[]) {
 			retries = strtol(optarg, NULL, 0);
 			break;
 		case 'v':
+			is_vlan_used = 1;
 			vlan = strtol(optarg, NULL, 0);
 			if(vlan > 4095){
 				fprintf(stderr, "vlan (%d) number is too long, must be less than 4096", vlan);
@@ -129,49 +130,104 @@ static void set_sighandlers() {
 	}
 }
 
-static int linkloop(int sock, const u_int8_t mac_src[], const u_int8_t mac_dst[]) {
+static int linkloop_strip_vlan(int sock, const u_int8_t mac_src[], const u_int8_t mac_dst[], struct llc_packet_strip_vlan * spack) {
 	int ret;
-	struct llc_packet spack;
 	struct llc_packet_strip_vlan rpack;
+	
 	int datasize = pack_size - sizeof(struct llc) - sizeof(struct ether_header) - sizeof(u_int32_t);
 
-	mk_test_packet(&spack, mac_src, mac_dst, pack_size, 0, 0);
+	mk_test_packet_strip_vlan(spack, mac_src, mac_dst, pack_size, 0, 0);
+
 	if(alarm(timeout) < 0) {
 		perror("alarm");
 		exit(1);
 	}
-	send_packet(sock, iface, &spack);
+	send_packet_strip_vlan(sock, iface, spack);
 	total_sent++;
 	ret = recv_packet(sock, &rpack);
 	if(ret == 0) {		/* timeout */
 		fprintf(stderr, "  ** TIMEOUT (%d seconds)\n", timeout);
 		total_timeout++;
-		return 0;
+                goto ERR;
 	}
 	if(htons(pack_size) != rpack.eth_hdr.ether_type) {
 		total_bad++;
 		printf("  ** BAD RECEIVED LENTH = %d\n", rpack.eth_hdr.ether_type);
-		return 0;
+                goto ERR;
 	}
-	if(memcmp(spack.eth_hdr.ether_dhost, rpack.eth_hdr.ether_shost, IFHWADDRLEN) != 0) {
+	if(memcmp(spack->eth_hdr.ether_dhost, rpack.eth_hdr.ether_shost, IFHWADDRLEN) != 0) {
 		total_bad++;
 		printf("  ** ROGUE RESPONDER: received from %s\n",
 			mac2str(rpack.eth_hdr.ether_shost));
-		return 0;
+                goto ERR;
 	}
-	if(memcmp(spack.data, rpack.data, datasize) != 0) {
+	if(memcmp(spack->data, rpack.data, datasize) != 0) {
 		total_bad++;
 		printf("  ** BAD RESPONSE\n");
 		dump_packet(&rpack);
-		return 0;
+                goto ERR;
 	}
+
 	total_good++;
 	return 1;
+
+    ERR:
+        return 0;    
+            
+}
+
+
+static int linkloop(int sock, const u_int8_t mac_src[], const u_int8_t mac_dst[], struct llc_packet *spack) {
+	int ret;
+	struct llc_packet_strip_vlan rpack;
+	
+	int datasize = pack_size - sizeof(struct llc) - sizeof(struct ether_header) - sizeof(u_int32_t);
+
+	mk_test_packet(spack, mac_src, mac_dst, pack_size, 0, 0);
+
+	if(alarm(timeout) < 0) {
+		perror("alarm");
+		exit(1);
+	}
+	send_packet(sock, iface, spack);
+	total_sent++;
+	ret = recv_packet(sock, &rpack);
+	if(ret == 0) {		/* timeout */
+		fprintf(stderr, "  ** TIMEOUT (%d seconds)\n", timeout);
+		total_timeout++;
+                goto ERR;
+	}
+	if(htons(pack_size) != rpack.eth_hdr.ether_type) {
+		total_bad++;
+		printf("  ** BAD RECEIVED LENTH = %d\n", rpack.eth_hdr.ether_type);
+                goto ERR;
+	}
+	if(memcmp(spack->eth_hdr.ether_dhost, rpack.eth_hdr.ether_shost, IFHWADDRLEN) != 0) {
+		total_bad++;
+		printf("  ** ROGUE RESPONDER: received from %s\n",
+			mac2str(rpack.eth_hdr.ether_shost));
+                goto ERR;
+	}
+	if(memcmp(spack->data, rpack.data, datasize) != 0) {
+		total_bad++;
+		printf("  ** BAD RESPONSE\n");
+		dump_packet(&rpack);
+                goto ERR;
+	}
+
+	total_good++;
+	return 1;
+
+    ERR:
+        return 0;    
+            
 }
 
 int main(int argc, char * const argv[]) {
 	int sock;
 	int i;
+	struct llc_packet spack;
+	struct llc_packet_strip_vlan spack_strip_vlan;
 
 	u_int8_t mac_src[IFHWADDRLEN];
 	u_int8_t mac_dst[IFHWADDRLEN];
@@ -198,8 +254,17 @@ int main(int argc, char * const argv[]) {
 
 	set_sighandlers();
 	for(i = 0; i < retries; i++) {
-		if(linkloop(sock, mac_src, mac_dst))
+		if(is_vlan_used){
+		    if(linkloop(sock, mac_src, mac_dst, &spack))
 			;
+
+		}
+		else{
+		    if(linkloop_strip_vlan(sock, mac_src, mac_dst, &spack_strip_vlan))
+			;
+		
+		}
+
 		if(debug_flag)
 			printf("Retry %d...\n", i);
 	}
