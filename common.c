@@ -177,7 +177,7 @@ void send_packet_strip_vlan(int sock, const char iface[], const u_int8_t *mac_sr
 		.sll_halen = ETH_ALEN,
 	};
 
-	memcpy(&sl.sll_addr, mac_src, ETH_ALEN);
+	memcpy(&sl.sll_addr, mac_dst, ETH_ALEN);
 
 	/* Send the packet */
 	ret = sendto(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sl, sizeof(sl));
