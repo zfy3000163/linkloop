@@ -24,7 +24,7 @@
 
 
 
-#define	PACK_SIZE	1514	/* This is what HPUX sends and responds to */
+#define	PACK_SIZE	1514-100	/* This is what HPUX sends and responds to */
 
 #define	MAX_IFACES	20
 

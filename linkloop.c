@@ -37,7 +37,7 @@ static unsigned total_timeout = 0;
 static unsigned total_bad = 0;
 
 /* Configurable options */
-size_t	pack_size = ETH_DATA_LEN - sizeof(u_int32_t);	/* 0x05DC == 1500 */
+size_t	pack_size = ETH_DATA_LEN - sizeof(u_int32_t) - 100;	/* 0x05DC == 1500 */
 int	timeout = 2;
 int	retries = 1;
 extern int vlan, is_vlan_used ;
