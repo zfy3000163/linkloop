@@ -142,7 +142,7 @@ static int linkloop_strip_vlan(int sock, const u_int8_t mac_src[], const u_int8_
 		perror("alarm");
 		exit(1);
 	}
-	send_packet_strip_vlan(sock, iface, spack);
+	send_packet_strip_vlan(sock, iface,mac_src, mac_dst, spack);
 	total_sent++;
 	ret = recv_packet(sock, &rpack);
 	if(ret == 0) {		/* timeout */
@@ -189,7 +189,7 @@ static int linkloop(int sock, const u_int8_t mac_src[], const u_int8_t mac_dst[]
 		perror("alarm");
 		exit(1);
 	}
-	send_packet(sock, iface, spack);
+	send_packet(sock, iface, mac_src, mac_dst, spack);
 	total_sent++;
 	ret = recv_packet(sock, &rpack);
 	if(ret == 0) {		/* timeout */
@@ -242,7 +242,7 @@ int main(int argc, char * const argv[]) {
 	//printf("Link connectivity to LAN station: %s (HW addr %s)\n", arg_addr, mac2str(mac_dst));
 
 	/* Open a socket */
-	if((sock = socket(AF_INET, SOCK_PACKET, htons(ETH_P_802_2))) == -1) {
+	if((sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_802_2))) == -1) {
 		perror("socket");
 		return 1;
 	}

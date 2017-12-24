@@ -167,16 +167,20 @@ void mk_test_packet_strip_vlan(struct llc_packet_strip_vlan *pack, const u_int8_
         pack->data[3] = 0x0;
 }
 
-void send_packet_strip_vlan(int sock, const char iface[], struct llc_packet_strip_vlan * pack) {
-	struct sockaddr sa;
+void send_packet_strip_vlan(int sock, const char iface[], const u_int8_t *mac_src, const u_int8_t *mac_dst, struct llc_packet_strip_vlan * pack) {
 	int ret;
+        int index = if_nametoindex(iface);
+        struct sockaddr_ll sl = {
+		.sll_family = AF_PACKET,
+		.sll_protocol = htons(ETH_P_802_2),
+		.sll_ifindex = index,
+		.sll_halen = ETH_ALEN,
+	};
 
-	bzero((char *)&sa, sizeof(struct sockaddr));
-	sa.sa_family = AF_INET;
-	strncpy(sa.sa_data, iface, IF_NAMESIZE - 1);
+	memcpy(&sl.sll_addr, mac_src, ETH_ALEN);
 
 	/* Send the packet */
-	ret = sendto(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sa, sizeof(sa));
+	ret = sendto(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sl, sizeof(sl));
 	if(ret == -1) {
 		perror("sendto");
 		exit(1);
@@ -187,16 +191,20 @@ void send_packet_strip_vlan(int sock, const char iface[], struct llc_packet_stri
 		printf("sent TEST packet to %s\n", mac2str(pack->eth_hdr.ether_dhost));
 }
 
-void send_packet(int sock, const char iface[], struct llc_packet * pack) {
-	struct sockaddr sa;
+void send_packet(int sock, const char iface[], const u_int8_t *mac_src, const  u_int8_t *mac_dst, struct llc_packet * pack) {
+        int index = if_nametoindex(iface);
+        struct sockaddr_ll sl = {
+		.sll_family = AF_INET,
+		.sll_protocol = htons(ETH_P_802_2),
+		.sll_ifindex = index,
+		.sll_halen = ETH_ALEN,
+	};
+
+	memcpy(&sl.sll_addr, mac_dst, ETH_ALEN);
 	int ret;
 
-	bzero((char *)&sa, sizeof(struct sockaddr));
-	sa.sa_family = AF_INET;
-	strncpy(sa.sa_data, iface, IF_NAMESIZE - 1);
-
 	/* Send the packet */
-	ret = sendto(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sa, sizeof(sa));
+	ret = sendto(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sl, sizeof(sl));
 	if(ret == -1) {
 		perror("sendto");
 		exit(1);
@@ -208,12 +216,12 @@ void send_packet(int sock, const char iface[], struct llc_packet * pack) {
 }
 
 int recv_packet(int sock, struct llc_packet_strip_vlan *pack) {
-	struct sockaddr sa;
+	struct sockaddr_ll sl;
 	socklen_t len;
 	int ret;
 
-	len = sizeof(sa);
-	ret = recvfrom(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sa, &len);
+	len = sizeof(sl);
+	ret = recvfrom(sock, pack, sizeof(*pack), 0, (struct sockaddr *)&sl, &len);
 	if(ret == -1) {
 		if(errno == EINTR)	/* We have a timeout */
 			return 0;

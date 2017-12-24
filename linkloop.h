@@ -15,6 +15,15 @@
 
 #include <netinet/if_ether.h>
 
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+
+#include <linux/if_packet.h>
+
+
+
 #define	PACK_SIZE	1514	/* This is what HPUX sends and responds to */
 
 #define	MAX_IFACES	20
@@ -49,8 +58,8 @@ int parse_address(u_int8_t mac[], const char *str);
 void get_hwaddr(int sock, const char name[], u_int8_t mac[]);
 void mk_test_packet(struct llc_packet *pack, const u_int8_t src[], const u_int8_t dst[], size_t len, int response, u_int16_t vlan_reply);
 void mk_test_packet_strip_vlan(struct llc_packet_strip_vlan *pack, const u_int8_t src[], const u_int8_t dst[], size_t len, int response, u_int16_t vlan_reply);
-void send_packet(int sock, const char iface[], struct llc_packet *pack);
-void send_packet_strip_vlan(int sock, const char iface[], struct llc_packet_strip_vlan *pack);
+void send_packet(int sock, const char iface[], const u_int8_t *mac_src, const u_int8_t *mac_dst, struct llc_packet *pack);
+void send_packet_strip_vlan(int sock, const char iface[], const u_int8_t *mac_src, const u_int8_t *mac_dst, struct llc_packet_strip_vlan *pack);
 int recv_packet(int sock, struct llc_packet_strip_vlan *pack);
 
 #endif	/* LINKLOOP_H */

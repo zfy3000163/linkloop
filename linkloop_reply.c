@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
 	/* Open the socket */
 	printf ("Opening a socket\n");
-	if ((sock = socket(AF_INET, SOCK_PACKET, htons(ETH_P_802_2))) == -1) {
+	if ((sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_802_2))) == -1) {
 		perror("socket");
 		return 1;
 	}
@@ -87,12 +87,12 @@ int main(int argc, char *argv[]) {
 			    struct vlan_get *st_get_vlan = (struct vlan_get*)(rpack.data);
 			    vlan_reply[i] = ntohs(st_get_vlan->vlan_id);
 			    mk_test_packet(&spack, mac_dst, mac_src, len, 1, vlan_reply[i]);
-			    send_packet(sock, argv[i+1], &spack);
+			    send_packet(sock, argv[i+1],mac_src, mac_dst, &spack);
 			}
 			else if(rpack.data[3] == 0x0){
 			
 			    mk_test_packet_strip_vlan(&spack_strip_vlan, mac_dst, mac_src, len, 1, 0);
-			    send_packet_strip_vlan(sock, argv[i+1], &spack_strip_vlan);
+			    send_packet_strip_vlan(sock, argv[i+1], mac_src, mac_dst, &spack_strip_vlan);
 			}
 				
 			/* return a test packet to the sender */
